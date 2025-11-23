@@ -20,9 +20,12 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Path
 import android.graphics.drawable.Drawable
+import android.os.UserHandle
 import androidx.annotation.ColorRes
 import androidx.annotation.DrawableRes
 import androidx.annotation.IntDef
+import androidx.annotation.NonNull
+import androidx.annotation.Nullable
 import com.android.launcher3.icons.cache.CacheLookupFlag
 import com.android.launcher3.util.FlagOp
 
@@ -46,6 +49,12 @@ open class BitmapInfo(
 
     private var badgeInfo: BitmapInfo? = null
 
+    @Nullable
+    private var mUserHandle: UserHandle? = null
+
+    @Nullable
+    private var mUserBadge: Drawable? = null
+
     fun withBadgeInfo(badgeInfo: BitmapInfo?) = clone().also { it.badgeInfo = badgeInfo }
 
     /** Returns a bitmapInfo with the flagOP applied */
@@ -54,6 +63,12 @@ open class BitmapInfo(
             return this
         }
         return clone().also { it.flags = op.apply(it.flags) }
+    }
+
+    fun withUser(@Nullable user: UserHandle?, @NonNull iconFactory: BaseIconFactory): BitmapInfo {
+        val result = clone()
+        result.setUser(user, iconFactory)
+        return result
     }
 
     @Override
@@ -65,6 +80,8 @@ open class BitmapInfo(
         target.themedBitmap = themedBitmap
         target.flags = flags
         target.badgeInfo = badgeInfo
+        target.mUserHandle = mUserHandle
+        target.mUserBadge = mUserBadge
         return target
     }
 
@@ -74,6 +91,17 @@ open class BitmapInfo(
 
     val isLowRes: Boolean
         get() = matchingLookupFlag.useLowRes()
+
+    fun setUser(@Nullable user: UserHandle?, @NonNull iconFactory: BaseIconFactory) {
+        mUserHandle = user
+        if (user != null) {
+            mUserBadge = iconFactory.getBadgeForUser(mUserHandle!!)
+        } else {
+            mUserBadge = null
+        }
+    }
+
+    fun getUser(): UserHandle? = mUserHandle
 
     open val matchingLookupFlag: CacheLookupFlag
         /** Returns the lookup flag to match this current state of this info */
@@ -174,6 +202,11 @@ open class BitmapInfo(
         }
         if (skipUserBadge) {
             return null
+        } else if (mUserBadge != null) {
+            // We use a copy of the badge, or changes will affect everywhere it is used;
+            // e.g., shortcuts/widget user badges are very small, and these could affect
+            // regular launcher icons, and the other way around.
+            return mUserBadge!!.constantState?.newDrawable()?.mutate()
         } else {
             getBadgeDrawableInfo()?.let {
                 return UserBadgeDrawable(
