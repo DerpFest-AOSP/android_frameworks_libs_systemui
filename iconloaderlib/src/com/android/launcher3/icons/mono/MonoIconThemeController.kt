@@ -44,7 +44,7 @@ import java.nio.ByteBuffer
 
 @TargetApi(Build.VERSION_CODES.TIRAMISU)
 class MonoIconThemeController(
-    private val shouldForceThemeIcon: Boolean = false,
+    private val shouldForceThemeIcon: Boolean = true,
     private val colorProvider: (Context) -> IntArray = ThemedIconDelegate.Companion::getColors,
 ) : IconThemeController {
 
