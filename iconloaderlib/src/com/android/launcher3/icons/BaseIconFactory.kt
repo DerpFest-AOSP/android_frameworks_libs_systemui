@@ -194,7 +194,10 @@ constructor(
                     InsetDrawable(icon, inset, inset, inset, inset),
                 )
         }
-        if (options.wrapNonAdaptiveIcon) tempIcon = wrapToAdaptiveIcon(tempIcon, options)
+        if (options.wrapNonAdaptiveIcon && 
+            (tempIcon.changingConfigurations and CONFIG_HINT_NO_WRAP) == 0) {
+            tempIcon = wrapToAdaptiveIcon(tempIcon, options)
+        }
 
         val drawFullBleed = options.drawFullBleed ?: drawFullBleedIcons
         val bitmap = drawableToBitmap(tempIcon, drawFullBleed, options)
@@ -541,6 +544,8 @@ constructor(
     }
 
     companion object {
+        const val CONFIG_HINT_NO_WRAP = 0x1000000
+
         private const val DEFAULT_WRAPPER_BACKGROUND = Color.WHITE
 
         // Ratio of icon visible area to full icon size for a square shaped icon
