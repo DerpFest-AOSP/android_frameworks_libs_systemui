@@ -17,6 +17,7 @@ package com.android.launcher3.icons
 
 import android.content.Context
 import android.content.Intent.ShortcutIconResource
+import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Bitmap.Config.ARGB_8888
 import android.graphics.Canvas
@@ -28,7 +29,9 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.InsetDrawable
+import android.os.Process
 import android.os.UserHandle
+import android.util.Pair
 import android.util.SparseArray
 import androidx.annotation.ColorInt
 import androidx.annotation.IntDef
@@ -48,6 +51,7 @@ import kotlin.annotation.AnnotationRetention.SOURCE
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.sqrt
+import java.util.LinkedHashMap
 
 /**
  * This class will be moved to androidx library. There shouldn't be any dependency outside this
@@ -66,6 +70,18 @@ constructor(
     private val cachedUserInfo = SparseArray<UserIconInfo>()
 
     private val shadowGenerator: ShadowGenerator by lazy { ShadowGenerator(iconBitmapSize) }
+
+    // User badges cached by size, e.g. workspace badge (large) vs widget badge (small)
+    private val mUserBadges: LinkedHashMap<Pair<UserHandle, Int>, Bitmap> =
+        object : LinkedHashMap<Pair<UserHandle, Int>, Bitmap>() {
+            // This *is* a cache, so it shouldn't grow forever. Lazily limit it by number of entries.
+            // We will likely only be dealing with 2 different sizes; multiply that by the number of
+            // profiles + 1 for the current user, and we really don't need much room. This is plenty.
+            private val MAX_ENTRIES = 50
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<UserHandle, Int>, Bitmap>?): Boolean {
+                return size > MAX_ENTRIES
+            }
+        }
 
     /** Default IconShape for when custom shape is not needed */
     val defaultIconShape: IconShape by
@@ -219,6 +235,13 @@ constructor(
             info = info.copy(themedBitmap = ThemedBitmap.NOT_SUPPORTED)
         }
 
+        if (options != null) {
+            val user = options.userHandle ?: options.userIconInfo?.user
+            if (user != null) {
+                info = info.withUser(user, this)
+            }
+        }
+
         return info
     }
 
@@ -358,6 +381,68 @@ constructor(
 
     fun makeDefaultIcon(iconProvider: IconProvider): BitmapInfo {
         return createBadgedIconBitmap(iconProvider.getFullResDefaultActivityIcon(fullResIconDpi))
+    }
+
+    fun getBadgeForUser(user: UserHandle): Drawable {
+        return getBadgeForUser(user, iconBitmapSize)
+    }
+
+    /**
+     * Returns a drawable that can be used as a badge for the user or null.
+     */
+    // @UiThread
+    fun getBadgeForUser(user: UserHandle, iconSize: Int): Drawable {
+        val badgeSize = getBadgeSizeForIconSize(iconSize)
+        val badgeBitmap = getUserBadge(user, badgeSize)
+        val d = FastBitmapDrawable(BitmapInfo.of(badgeBitmap, 0))
+        d.setFilterBitmap(true)
+        d.setBounds(0, 0, badgeBitmap.width, badgeBitmap.height)
+        return d
+    }
+
+    private fun getUserBadge(user: UserHandle, badgeSize: Int): Bitmap {
+        if (badgeSize > iconBitmapSize) {
+            throw IllegalArgumentException("badgeSize cannot be larger than iconBitmapSize: " +
+                    "got $badgeSize, expected less than or equal to $iconBitmapSize")
+        }
+        val userBadgeOfSize = android.util.Pair(user, badgeSize)
+        synchronized(mUserBadges) {
+            val badgeBitmap = mUserBadges[userBadgeOfSize]
+            if (badgeBitmap != null) {
+                return badgeBitmap
+            }
+
+            val res: Resources = context.resources
+            var badgedBitmap = Bitmap.createBitmap(
+                    iconBitmapSize, iconBitmapSize, Bitmap.Config.ARGB_8888)
+
+            // PackageManager's getUserBadgedDrawableForDensity results in a giant work profile
+            // icon that extends outside of the badge icon's circle, seemingly no matter what
+            // arguments are provided. getUserBadgeForDensity is not even exposed (hidden).
+            // So, unfortunately, we draw into a full icon size Bitmap and then crop out the
+            // badge from the corner.
+            val drawable = context.packageManager.getUserBadgedIcon(
+                    BitmapDrawable(res, badgedBitmap), user)
+            /* Drawable drawable = mContext.getPackageManager().getUserBadgedDrawableForDensity(
+                    new BitmapDrawable(res, badgeBitmap), user,
+                    new Rect(0, 0, badgeSize, badgeSize),
+                    0); */
+            if (drawable is BitmapDrawable) {
+                badgedBitmap = drawable.bitmap
+            } else {
+                badgedBitmap.eraseColor(Color.TRANSPARENT)
+                val c = Canvas(badgedBitmap)
+                drawable.setBounds(0, 0, badgeSize, badgeSize)
+                drawable.draw(c)
+                c.setBitmap(null)
+            }
+            val cropOffset = max(iconBitmapSize - badgeSize, 0)
+            val resultBadge = Bitmap.createBitmap(badgedBitmap,
+                    cropOffset, cropOffset,
+                    badgeSize, badgeSize)
+            mUserBadges[userBadgeOfSize] = resultBadge
+            return resultBadge
+        }
     }
 
     class IconOptions {

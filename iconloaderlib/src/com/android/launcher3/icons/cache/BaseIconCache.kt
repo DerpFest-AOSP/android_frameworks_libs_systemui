@@ -248,10 +248,12 @@ constructor(
 
     @Synchronized
     fun getDefaultIcon(user: UserHandle): BitmapInfo {
-        if (defaultIcon == null) {
-            iconFactory.use { li -> defaultIcon = li.makeDefaultIcon(iconProvider) }
+        iconFactory.use { li ->
+            if (defaultIcon == null) {
+                defaultIcon = li.makeDefaultIcon(iconProvider)
+            }
+            return defaultIcon!!.withUser(user, li)
         }
-        return defaultIcon!!.withFlags(getUserFlagOpLocked(user))
     }
 
     protected fun getUserFlagOpLocked(user: UserHandle): FlagOp {
@@ -578,10 +580,12 @@ constructor(
                 }
             }
         }
-        entry.bitmap =
-            entry.bitmap.copy(
+        iconFactory.use { factory ->
+            entry.bitmap = entry.bitmap.copy(
                 flags = getUserFlagOpLocked(cacheKey.user).apply(c.getInt(INDEX_FLAGS))
             )
+            entry.bitmap = entry.bitmap.withUser(cacheKey.user, factory)
+        }
         iconProvider.notifyIconLoaded(entry.bitmap, cacheKey, logic)
         return true
     }
