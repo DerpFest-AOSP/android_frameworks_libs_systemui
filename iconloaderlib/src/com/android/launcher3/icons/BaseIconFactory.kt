@@ -182,6 +182,9 @@ constructor(
         // Create the bitmap first
         val oldBounds = icon.bounds
 
+        // Check if icon has CONFIG_HINT_NO_WRAP to preserve transparency for icon pack icons
+        val hasNoWrapHint = (icon.changingConfigurations and CONFIG_HINT_NO_WRAP) != 0
+
         var tempIcon: Drawable = icon
         if (options.isFullBleed && icon is BitmapDrawable) {
             // If the source is a full-bleed icon, create an adaptive icon by insetting this icon to
@@ -200,7 +203,7 @@ constructor(
         }
 
         val drawFullBleed = options.drawFullBleed ?: drawFullBleedIcons
-        val bitmap = drawableToBitmap(tempIcon, drawFullBleed, options)
+        val bitmap = drawableToBitmap(tempIcon, drawFullBleed, options, hasNoWrapHint)
         icon.bounds = oldBounds
 
         val color = options.extractedColor ?: findDominantColorByHue(bitmap)
@@ -311,6 +314,7 @@ constructor(
         icon: Drawable,
         drawFullBleed: Boolean,
         options: IconOptions,
+        hasNoWrapHint: Boolean = false,
     ): Bitmap {
         if (icon is AdaptiveIconDrawable) {
             // We are ignoring KEY_SHADOW_DISTANCE because regular icons ignore this at the
@@ -333,7 +337,10 @@ constructor(
                     if (icon is Extender) icon.drawForPersistence()
 
                     if (drawFullBleed) {
-                        drawColor(Color.BLACK)
+                        // Use transparent background for icon pack icons to preserve their shape
+                        if (!hasNoWrapHint) {
+                            drawColor(Color.BLACK)
+                        }
                         icon.background?.draw(canvas)
                         icon.foreground?.draw(canvas)
                     } else {
@@ -352,7 +359,10 @@ constructor(
             iconToDraw.setBounds(0, 0, iconBitmapSize, iconBitmapSize)
 
             return createBitmap(options) { canvas, bitmap ->
-                if (drawFullBleed) canvas.drawColor(Color.BLACK)
+                // Use transparent background for icon pack icons to preserve their shape
+                if (drawFullBleed && !hasNoWrapHint) {
+                    canvas.drawColor(Color.BLACK)
+                }
                 iconToDraw.draw(canvas)
 
                 if (options.addShadows && bitmap != null && !drawFullBleed) {
