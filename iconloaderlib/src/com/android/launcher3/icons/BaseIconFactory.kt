@@ -202,13 +202,14 @@ constructor(
             tempIcon = wrapToAdaptiveIcon(tempIcon, options)
         }
 
-        val drawFullBleed = options.drawFullBleed ?: drawFullBleedIcons
-        val bitmap = drawableToBitmap(tempIcon, drawFullBleed, options, hasNoWrapHint)
+        // For icon pack icons, don't use full-bleed rendering to avoid shape shadows
+        val effectiveDrawFullBleed = if (hasNoWrapHint) false else (options.drawFullBleed ?: drawFullBleedIcons)
+        val bitmap = drawableToBitmap(tempIcon, effectiveDrawFullBleed, options, hasNoWrapHint)
         icon.bounds = oldBounds
 
         val color = options.extractedColor ?: findDominantColorByHue(bitmap)
         var flagOp = getBitmapFlagOp(options)
-        if (drawFullBleed) {
+        if (effectiveDrawFullBleed) {
             flagOp = flagOp.addFlag(BitmapInfo.FLAG_FULL_BLEED)
             bitmap.setHasAlpha(false)
         }
