@@ -28,6 +28,7 @@ import com.google.ux.material.libmonet.dynamiccolor.DynamicScheme;
 import com.google.ux.material.libmonet.hct.Hct;
 import com.google.ux.material.libmonet.scheme.SchemeContent;
 import com.google.ux.material.libmonet.scheme.SchemeExpressive;
+import com.google.ux.material.libmonet.scheme.SchemeFidelity;
 import com.google.ux.material.libmonet.scheme.SchemeFruitSalad;
 import com.google.ux.material.libmonet.scheme.SchemeMonochrome;
 import com.google.ux.material.libmonet.scheme.SchemeNeutral;
@@ -103,6 +104,7 @@ public class ColorScheme {
             case ThemeStyle.FRUIT_SALAD -> new SchemeFruitSalad(seedHct, isDark, contrastLevel);
             case ThemeStyle.CONTENT -> new SchemeContent(seedHct, isDark, contrastLevel);
             case ThemeStyle.MONOCHROMATIC -> new SchemeMonochrome(seedHct, isDark, contrastLevel);
+            case ThemeStyle.FIDELITY -> new SchemeFidelity(seedHct, isDark, contrastLevel);
             // SystemUI Schemes
             case ThemeStyle.CLOCK -> new SchemeClock(seedHct, isDark, contrastLevel);
             case ThemeStyle.CLOCK_VIBRANT -> new SchemeClockVibrant(seedHct, isDark, contrastLevel);
@@ -118,6 +120,7 @@ public class ColorScheme {
             case ThemeStyle.FRUIT_SALAD -> new SchemeFruitSalad(bgSeedHct, isDark, contrastLevel);
             case ThemeStyle.CONTENT -> new SchemeContent(bgSeedHct, isDark, contrastLevel);
             case ThemeStyle.MONOCHROMATIC -> new SchemeMonochrome(bgSeedHct, isDark, contrastLevel);
+            case ThemeStyle.FIDELITY -> new SchemeFidelity(bgSeedHct, isDark, contrastLevel);
             // SystemUI Schemes
             case ThemeStyle.CLOCK -> new SchemeClock(bgSeedHct, isDark, contrastLevel);
             case ThemeStyle.CLOCK_VIBRANT -> new SchemeClockVibrant(bgSeedHct, isDark, contrastLevel);
