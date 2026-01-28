@@ -33,6 +33,7 @@ import com.google.ux.material.libmonet.hct.Hct;
 import com.google.ux.material.libmonet.scheme.SchemeCmf;
 import com.google.ux.material.libmonet.scheme.SchemeContent;
 import com.google.ux.material.libmonet.scheme.SchemeExpressive;
+import com.google.ux.material.libmonet.scheme.SchemeFidelity;
 import com.google.ux.material.libmonet.scheme.SchemeFruitSalad;
 import com.google.ux.material.libmonet.scheme.SchemeMonochrome;
 import com.google.ux.material.libmonet.scheme.SchemeNeutral;
@@ -147,6 +148,8 @@ public class ColorScheme {
                     specVersion, platform);
             case ThemeStyle.CMF -> new SchemeCmf(seedHcts, isDark, contrastLevel,
                     specVersion, platform);
+            case ThemeStyle.FIDELITY -> new SchemeFidelity(seedHcts, isDark, contrastLevel,
+                    specVersion, platform);
 
 
             // SystemUI Schemes
@@ -174,6 +177,8 @@ public class ColorScheme {
             case ThemeStyle.MONOCHROMATIC -> new SchemeMonochrome(bgSeedHcts, isDark, contrastLevel,
                     specVersion, platform);
             case ThemeStyle.CMF -> new SchemeCmf(bgSeedHcts, isDark, contrastLevel,
+                    specVersion, platform);
+            case ThemeStyle.FIDELITY -> new SchemeFidelity(bgSeedHcts, isDark, contrastLevel,
                     specVersion, platform);
             // SystemUI Schemes
             case ThemeStyle.CLOCK -> new SchemeClock(bgSeedHct, isDark, contrastLevel);
