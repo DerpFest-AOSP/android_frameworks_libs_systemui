@@ -16,15 +16,20 @@
 
 package com.android.systemui.monet;
 
-import com.google.ux.material.libmonet.hct.Hct;
+import com.android.internal.graphics.cam.Cam;
+import com.android.internal.graphics.cam.Frame;
+import com.android.internal.graphics.ColorUtils;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 public class TonalPalette {
-    private final com.google.ux.material.libmonet.palettes.TonalPalette mMaterialTonalPalette;
+    private final float mHue;
+    private final float mChroma;
+    private final Map<Integer, Integer> cache = new HashMap<>();
     /**
      * @deprecated Do not use. For color system only
      */
@@ -32,22 +37,39 @@ public class TonalPalette {
     public final List<Integer> allShades;
     public final Map<Integer, Integer> allShadesMapped;
 
-    TonalPalette(com.google.ux.material.libmonet.palettes.TonalPalette materialTonalPalette) {
-        this(materialTonalPalette, 1f, 1f);
+    TonalPalette(float hue, float chroma) {
+        this(hue, chroma, 1f, 1f);
     }
 
-    TonalPalette(com.google.ux.material.libmonet.palettes.TonalPalette materialTonalPalette,
-            float luminanceFactor, float chromaFactor) {
-        Hct newHct = materialTonalPalette.getKeyColor();
-        newHct.setChroma(newHct.getChroma() * chromaFactor);
-        newHct.setTone(newHct.getTone() * luminanceFactor);
-        materialTonalPalette = com.google.ux.material.libmonet.palettes.TonalPalette.fromHct(newHct);
-
-        this.mMaterialTonalPalette = materialTonalPalette;
+    TonalPalette(float hue, float chroma, float luminanceFactor, float chromaFactor) {
+        this.mHue = hue;
+        this.mChroma = chroma * chromaFactor;
         this.allShades = SHADE_KEYS.stream().map(key -> getAtTone(key.floatValue(), luminanceFactor))
                 .collect(Collectors.toList());
         this.allShadesMapped = SHADE_KEYS.stream().collect(
                 Collectors.toMap(key -> key, key -> getAtTone(key.floatValue(), luminanceFactor)));
+    }
+
+    /**
+     * Create tones using the CAM hue and chroma from a color.
+     *
+     * @param argb ARGB representation of a color
+     * @return Tones matching that color's hue and chroma.
+     */
+    public static TonalPalette fromInt(int argb) {
+        Cam cam = Cam.fromInt(argb);
+        return new TonalPalette(cam.getHue(), cam.getChroma());
+    }
+
+    /**
+     * Create tones from a defined CAM hue and chroma.
+     *
+     * @param hue CAM hue
+     * @param chroma CAM chroma
+     * @return Tones matching hue and chroma.
+     */
+    public static TonalPalette fromHueAndChroma(float hue, float chroma) {
+        return new TonalPalette(hue, chroma);
     }
 
     /**
@@ -56,7 +78,8 @@ public class TonalPalette {
      * @return Int representing color at new shade / tone
      */
     public int getAtTone(float shade) {
-        return mMaterialTonalPalette.tone((int) ((1000.0f - shade) / 10f));
+        int tone = (int) ((1000.0f - shade) / 10f);
+        return tone(tone);
     }
 
     /**
@@ -70,7 +93,17 @@ public class TonalPalette {
         tone = Math.round((float) tone * luminanceFactor);
         if (tone > 100) tone = 100;
         else if (tone < 0) tone = 0;
-        return mMaterialTonalPalette.tone(tone);
+        return tone(tone);
+    }
+
+    /**
+     * Create an ARGB color with CAM hue and chroma of this palette, and the provided tone.
+     *
+     * @param tone CAM tone (L*), measured from 0 to 100.
+     * @return ARGB representation of a color with that tone.
+     */
+    private int tone(int tone) {
+        return cache.computeIfAbsent(tone, k -> Cam.getInt(this.mHue, this.mChroma, (float) tone, Frame.DEFAULT));
     }
 
     // Predefined & precomputed tones

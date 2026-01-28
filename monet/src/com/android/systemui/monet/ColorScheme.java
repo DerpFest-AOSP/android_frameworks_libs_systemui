@@ -23,6 +23,7 @@ import android.content.theming.ThemeStyle;
 import android.graphics.Color;
 
 import com.android.internal.graphics.ColorUtils;
+import com.android.internal.graphics.cam.Cam;
 
 import com.google.ux.material.libmonet.dynamiccolor.DynamicScheme;
 import com.google.ux.material.libmonet.hct.Hct;
@@ -64,7 +65,7 @@ public class ColorScheme {
     private final TonalPalette mNeutral1;
     private final TonalPalette mNeutral2;
     private final TonalPalette mError;
-    private final Hct mProposedSeedHct;
+    private final Cam mProposedSeedCam;
 
     public ColorScheme(@ColorInt int seed, boolean isDark, @ThemeStyle.Type int style, double contrastLevel) {
         this(seed, isDark, style, contrastLevel, 1f, 1f, false, false, null);
@@ -77,12 +78,12 @@ public class ColorScheme {
         this.mIsDark = isDark;
         this.mStyle = style;
 
-        mProposedSeedHct = Hct.fromInt(seed);
+        mProposedSeedCam = Cam.fromInt(seed);
         Hct seedHct = Hct.fromInt(
                 seed == Color.TRANSPARENT
                         ? GOOGLE_BLUE
                         : (style != ThemeStyle.CONTENT
-                                && mProposedSeedHct.getChroma() < 5
+                                && mProposedSeedCam.getChroma() < 5
                                 ? GOOGLE_BLUE
                                 : seed));
 
@@ -91,7 +92,7 @@ public class ColorScheme {
                 bgSeed == Color.TRANSPARENT
                         ? GOOGLE_BLUE
                         : (style != ThemeStyle.CONTENT
-                                && mProposedSeedHct.getChroma() < 5
+                                && mProposedSeedCam.getChroma() < 5
                                 ? GOOGLE_BLUE
                                 : bgSeed));
 
@@ -127,18 +128,31 @@ public class ColorScheme {
             default -> throw new IllegalArgumentException("Unknown style: " + style);
         };
 
-        mAccent1 = new TonalPalette(mMaterialScheme.primaryPalette, luminanceFactor, chromaFactor);
-        mAccent2 = new TonalPalette(mMaterialScheme.secondaryPalette,
+        // Convert Material palettes to CAM-based TonalPalettes
+        mAccent1 = convertToCAMPalette(mMaterialScheme.primaryPalette, luminanceFactor, chromaFactor);
+        mAccent2 = convertToCAMPalette(mMaterialScheme.secondaryPalette,
                 wholePalette ? luminanceFactor : 1f,
                 wholePalette ? chromaFactor : 1f);
-        mAccent3 = new TonalPalette(mMaterialScheme.tertiaryPalette, luminanceFactor, chromaFactor);
-        mNeutral1 = new TonalPalette(bgScheme.neutralPalette,
+        mAccent3 = convertToCAMPalette(mMaterialScheme.tertiaryPalette, luminanceFactor, chromaFactor);
+        mNeutral1 = convertToCAMPalette(bgScheme.neutralPalette,
                 tintBackground ? luminanceFactor : 1f,
                 tintBackground ? chromaFactor : 1f);
-        mNeutral2 = new TonalPalette(bgScheme.neutralVariantPalette,
+        mNeutral2 = convertToCAMPalette(bgScheme.neutralVariantPalette,
                 tintBackground && wholePalette ? luminanceFactor : 1f,
                 tintBackground && wholePalette ? chromaFactor : 1f);
-        mError = new TonalPalette(mMaterialScheme.errorPalette, luminanceFactor, chromaFactor);
+        mError = convertToCAMPalette(mMaterialScheme.errorPalette, luminanceFactor, chromaFactor);
+    }
+
+    /**
+     * Convert a Material libmonet TonalPalette to a CAM-based TonalPalette
+     */
+    private static TonalPalette convertToCAMPalette(
+            com.google.ux.material.libmonet.palettes.TonalPalette materialPalette,
+            float luminanceFactor, float chromaFactor) {
+        Hct keyColor = materialPalette.getKeyColor();
+        // Convert from Material Hct to Android CAM
+        Cam cam = Cam.fromInt(keyColor.toInt());
+        return new TonalPalette(cam.getHue(), cam.getChroma(), luminanceFactor, chromaFactor);
     }
 
     public ColorScheme(@ColorInt int seed, boolean darkTheme) {
@@ -171,7 +185,7 @@ public class ColorScheme {
     }
 
     public double getSeedTone() {
-        return 1000d - mProposedSeedHct.getTone() * 10d;
+        return 1000d - mProposedSeedCam.getJ() * 10d;
     }
 
     public int getSeed() {
@@ -270,7 +284,7 @@ public class ColorScheme {
             List<Integer> distinctColors = wallpaperColors.getMainColors().stream()
                     .map(Color::toArgb)
                     .distinct()
-                    .filter(color -> !filter || Hct.fromInt(color).getChroma() >= MIN_CHROMA)
+                    .filter(color -> !filter || Cam.fromInt(color).getChroma() >= MIN_CHROMA)
                     .collect(Collectors.toList());
             if (distinctColors.isEmpty()) {
                 return List.of(GOOGLE_BLUE);
@@ -281,16 +295,16 @@ public class ColorScheme {
         Map<Integer, Double> intToProportion = wallpaperColors.getAllColors().entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey,
                         entry -> entry.getValue().doubleValue() / totalPopulation));
-        Map<Integer, Hct> intToHct = wallpaperColors.getAllColors().entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, entry -> Hct.fromInt(entry.getKey())));
+        Map<Integer, Cam> intToCam = wallpaperColors.getAllColors().entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> Cam.fromInt(entry.getKey())));
 
         // Get an array with 360 slots. A slot contains the percentage of colors with that hue.
-        List<Double> hueProportions = huePopulations(intToHct, intToProportion, filter);
+        List<Double> hueProportions = huePopulations(intToCam, intToProportion, filter);
         // Map each color to the percentage of the image with its hue.
         Map<Integer, Double> intToHueProportion = wallpaperColors.getAllColors().entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, entry -> {
-                    Hct hct = intToHct.get(entry.getKey());
-                    int hue = (int) Math.round(hct.getHue());
+                    Cam cam = intToCam.get(entry.getKey());
+                    int hue = (int) Math.round(cam.getHue());
                     double proportion = 0.0;
                     for (int i = hue - 15; i <= hue + 15; i++) {
                         proportion += hueProportions.get(wrapDegrees(i));
@@ -300,19 +314,19 @@ public class ColorScheme {
         // Remove any inappropriate seed colors. For example, low chroma colors look grayscale
         // raising their chroma will turn them to a much louder color that may not have been
         // in the image.
-        Map<Integer, Hct> filteredIntToHct = filter
-                ? intToHct
+        Map<Integer, Cam> filteredIntToCam = filter
+                ? intToCam
                 .entrySet()
                 .stream()
                 .filter(entry -> {
-                    Hct hct = entry.getValue();
+                    Cam cam = entry.getValue();
                     double proportion = intToHueProportion.get(entry.getKey());
-                    return hct.getChroma() >= MIN_CHROMA && proportion > 0.01;
+                    return cam.getChroma() >= MIN_CHROMA && proportion > 0.01;
                 })
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
-                : intToHct;
+                : intToCam;
         // Sort the colors by score, from high to low.
-        List<Map.Entry<Integer, Double>> intToScore = filteredIntToHct.entrySet().stream()
+        List<Map.Entry<Integer, Double>> intToScore = filteredIntToCam.entrySet().stream()
                 .map(entry -> new AbstractMap.SimpleEntry<>(entry.getKey(),
                         score(entry.getValue(), intToHueProportion.get(entry.getKey()))))
                 .sorted(Map.Entry.<Integer, Double>comparingByValue().reversed())
@@ -330,8 +344,8 @@ public class ColorScheme {
                 int currentColor = entry.getKey();
                 int finalI = i;
                 boolean existingSeedNearby = seeds.stream().anyMatch(seed -> {
-                    double hueA = intToHct.get(currentColor).getHue();
-                    double hueB = intToHct.get(seed).getHue();
+                    double hueA = intToCam.get(currentColor).getHue();
+                    double hueB = intToCam.get(seed).getHue();
                     return hueDiff(hueA, hueB) < finalI;
                 });
                 if (existingSeedNearby) {
@@ -388,12 +402,12 @@ public class ColorScheme {
 
     private static String stringForColor(int color) {
         int width = 4;
-        Hct hct = Hct.fromInt(color);
-        String h = "H" + String.format("%" + width + "s", Math.round(hct.getHue()));
-        String c = "C" + String.format("%" + width + "s", Math.round(hct.getChroma()));
-        String t = "T" + String.format("%" + width + "s", Math.round(hct.getTone()));
+        Cam cam = Cam.fromInt(color);
+        String h = "H" + String.format("%" + width + "s", Math.round(cam.getHue()));
+        String c = "C" + String.format("%" + width + "s", Math.round(cam.getChroma()));
+        String j = "J" + String.format("%" + width + "s", Math.round(cam.getJ()));
         String hex = Integer.toHexString(color & 0xffffff).toUpperCase();
-        return h + c + t + " = #" + hex;
+        return h + c + j + " = #" + hex;
     }
 
     private static String humanReadable(String paletteName, List<Integer> colors) {
@@ -404,23 +418,23 @@ public class ColorScheme {
                 .collect(Collectors.joining("\n"));
     }
 
-    private static double score(Hct hct, double proportion) {
+    private static double score(Cam cam, double proportion) {
         double proportionScore = 0.7 * 100.0 * proportion;
-        double chromaScore = hct.getChroma() < ACCENT1_CHROMA
-                ? 0.1 * (hct.getChroma() - ACCENT1_CHROMA)
-                : 0.3 * (hct.getChroma() - ACCENT1_CHROMA);
+        double chromaScore = cam.getChroma() < ACCENT1_CHROMA
+                ? 0.1 * (cam.getChroma() - ACCENT1_CHROMA)
+                : 0.3 * (cam.getChroma() - ACCENT1_CHROMA);
         return chromaScore + proportionScore;
     }
 
-    private static List<Double> huePopulations(Map<Integer, Hct> hctByColor,
+    private static List<Double> huePopulations(Map<Integer, Cam> camByColor,
             Map<Integer, Double> populationByColor, boolean filter) {
         List<Double> huePopulation = new ArrayList<>(Collections.nCopies(360, 0.0));
 
         for (Map.Entry<Integer, Double> entry : populationByColor.entrySet()) {
             double population = entry.getValue();
-            Hct hct = hctByColor.get(entry.getKey());
-            int hue = (int) Math.round(hct.getHue()) % 360;
-            if (filter && hct.getChroma() <= MIN_CHROMA) {
+            Cam cam = camByColor.get(entry.getKey());
+            int hue = (int) Math.round(cam.getHue()) % 360;
+            if (filter && cam.getChroma() <= MIN_CHROMA) {
                 continue;
             }
             huePopulation.set(hue, huePopulation.get(hue) + population);
