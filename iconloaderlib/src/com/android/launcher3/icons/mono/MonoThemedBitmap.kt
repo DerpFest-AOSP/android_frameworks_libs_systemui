@@ -51,28 +51,10 @@ class MonoThemedBitmap(
             }
     }
 
-    fun getUpdatedColors(ctx: Context): IntArray {
-        val colors =
-            if (luminanceDelta != null) {
-                ColorAdapter(luminanceDelta).adaptedColorProvider(colorProvider)(ctx)
-            } else {
-                colorProvider(ctx)
-            }
-
-        // Forced themed icons are currently inverted relative to app-provided monochrome
-        // icons, so swap bg/fg unconditionally for that path.
-        return if (luminanceDelta != null) swapBgFg(colors) else colors
-    }
-
-    private fun swapBgFg(colors: IntArray): IntArray {
-        if (colors.size < 2)
-            return colors
-
-        return colors.clone().also {
-            it[0] = colors[1]
-            it[1] = colors[0]
-        }
-    }
+    fun getUpdatedColors(ctx: Context): IntArray =
+        if (luminanceDelta != null)
+            ColorAdapter(luminanceDelta).adaptedColorProvider(colorProvider)(ctx)
+        else colorProvider(ctx)
 
     companion object {
         const val DOUBLE_BYTE_SIZE = 8
