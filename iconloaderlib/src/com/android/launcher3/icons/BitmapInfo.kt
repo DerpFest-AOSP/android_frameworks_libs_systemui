@@ -66,7 +66,17 @@ data class BitmapInfo(
     )
     internal annotation class BitmapInfoFlags
 
-    @IntDef(flag = true, value = [FLAG_THEMED, FLAG_NO_BADGE, FLAG_SKIP_USER_BADGE, FLAG_CUSTOM_SHAPE])
+    @IntDef(
+        flag = true,
+        value =
+            [
+                FLAG_THEMED,
+                FLAG_NO_BADGE,
+                FLAG_SKIP_USER_BADGE,
+                FLAG_CUSTOM_SHAPE,
+                FLAG_LAUNCHER_ICON_SHAPE,
+            ],
+    )
     annotation class DrawableCreationFlags
 
     fun withBadgeInfo(badgeInfo: BitmapInfo?) = copy(badgeInfo = badgeInfo)
@@ -257,6 +267,7 @@ data class BitmapInfo(
         const val FLAG_NO_BADGE: Int = 1 shl 1
         const val FLAG_SKIP_USER_BADGE: Int = 1 shl 2
         const val FLAG_CUSTOM_SHAPE: Int = 1 shl 3
+        const val FLAG_LAUNCHER_ICON_SHAPE: Int = 1 shl 4
 
         @JvmField val LOW_RES_ICON: Bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ALPHA_8)
         @JvmField val LOW_RES_INFO: BitmapInfo = fromBitmap(LOW_RES_ICON)
