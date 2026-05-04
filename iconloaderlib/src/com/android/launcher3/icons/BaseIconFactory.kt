@@ -38,6 +38,7 @@ import com.android.launcher3.icons.GraphicsUtils.generateIconShape
 import com.android.launcher3.icons.GraphicsUtils.transformed
 import com.android.launcher3.icons.IconNormalizer.ICON_VISIBLE_AREA_FACTOR
 import com.android.launcher3.icons.ShadowGenerator.BLUR_FACTOR
+import com.android.launcher3.icons.ExtendedBitmapDrawable.Companion.isFromIconPack
 import com.android.launcher3.util.FlagOp
 import com.android.launcher3.util.UserIconInfo
 import com.android.users.UserType
@@ -176,7 +177,7 @@ constructor(
                     InsetDrawable(icon, inset, inset, inset, inset),
                 )
         }
-        if (options.wrapNonAdaptiveIcon) tempIcon = wrapToAdaptiveIcon(tempIcon, options)
+        if (options.wrapNonAdaptiveIcon && !tempIcon.isFromIconPack) tempIcon = wrapToAdaptiveIcon(tempIcon, options)
 
         val drawFullBleed = options.drawFullBleed ?: drawFullBleedIcons
         val bitmap = drawableToBitmap(tempIcon, drawFullBleed, options)
