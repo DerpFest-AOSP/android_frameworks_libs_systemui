@@ -190,11 +190,12 @@ constructor(
             bitmap.setHasAlpha(false)
         }
 
+        val iconShape = if (icon.isFromIconPack) IconShape.EMPTY else defaultIconShape
         var info =
             BitmapInfo(
                 icon = bitmap,
                 color = color,
-                defaultIconShape = defaultIconShape,
+                defaultIconShape = iconShape,
                 flags = flagOp.apply(0),
             )
         if (icon is Extender) {
