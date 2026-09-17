@@ -270,11 +270,7 @@ internal class MSDLRepositoryImpl : MSDLRepository {
                                     delayMillis = 0,
                                 )
                             },
-                            VibrationEffect.createWaveform(
-                                longArrayOf(10, 20, 20, 10),
-                                intArrayOf(10, 30, 50, 10),
-                                -1,
-                            ),
+                            VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK),
                         )
                     },
                 HapticToken.DRAG_INDICATOR_DISCRETE to
