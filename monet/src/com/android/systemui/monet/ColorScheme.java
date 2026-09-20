@@ -117,17 +117,6 @@ public class ColorScheme {
                                     : seed));
         }).toList();
 
-        if (bgSeed == null) bgSeed = seeds.getFirst();
-        Hct bgProposedSeedHct = Hct.fromInt(bgSeed);
-        Hct bgSeedHct = Hct.fromInt(
-                bgSeed == Color.TRANSPARENT
-                        ? GOOGLE_BLUE
-                        : (style != ThemeStyle.CONTENT
-                                && bgProposedSeedHct.getChroma() < 5
-                                ? GOOGLE_BLUE
-                                : bgSeed));
-        List<Hct> bgSeedHcts = List.of(bgSeedHct);
-
         mMaterialScheme = switch (style) {
             case ThemeStyle.SPRITZ -> new SchemeNeutral(seedHcts, isDark, contrastLevel,
                     specVersion,
@@ -159,32 +148,48 @@ public class ColorScheme {
             default -> throw new IllegalArgumentException("Unknown style: " + style);
         };
 
-        final DynamicScheme bgScheme = switch (style) {
-            case ThemeStyle.SPRITZ -> new SchemeNeutral(bgSeedHcts, isDark, contrastLevel,
-                    specVersion, platform);
-            case ThemeStyle.TONAL_SPOT -> new SchemeTonalSpot(bgSeedHcts, isDark, contrastLevel,
-                    specVersion, platform);
-            case ThemeStyle.VIBRANT -> new SchemeVibrant(bgSeedHcts, isDark, contrastLevel,
-                    specVersion, platform);
-            case ThemeStyle.EXPRESSIVE -> new SchemeExpressive(bgSeedHcts, isDark, contrastLevel,
-                    specVersion, platform);
-            case ThemeStyle.RAINBOW -> new SchemeRainbow(bgSeedHcts, isDark, contrastLevel,
-                    specVersion, platform);
-            case ThemeStyle.FRUIT_SALAD -> new SchemeFruitSalad(bgSeedHcts, isDark, contrastLevel,
-                    specVersion, platform);
-            case ThemeStyle.CONTENT -> new SchemeContent(bgSeedHcts, isDark, contrastLevel,
-                    specVersion, platform);
-            case ThemeStyle.MONOCHROMATIC -> new SchemeMonochrome(bgSeedHcts, isDark, contrastLevel,
-                    specVersion, platform);
-            case ThemeStyle.CMF -> new SchemeCmf(bgSeedHcts, isDark, contrastLevel,
-                    specVersion, platform);
-            case ThemeStyle.FIDELITY -> new SchemeFidelity(bgSeedHcts, isDark, contrastLevel,
-                    specVersion, platform);
-            // SystemUI Schemes
-            case ThemeStyle.CLOCK -> new SchemeClock(bgSeedHct, isDark, contrastLevel);
-            case ThemeStyle.CLOCK_VIBRANT -> new SchemeClockVibrant(bgSeedHct, isDark, contrastLevel);
-            default -> throw new IllegalArgumentException("Unknown style: " + style);
-        };
+        final DynamicScheme bgScheme;
+        if (bgSeed == null) {
+            bgScheme = mMaterialScheme;
+        } else {
+            final int bg = bgSeed;
+            Hct bgProposedSeedHct = Hct.fromInt(bg);
+            List<Hct> bgSeedHcts = List.of(Hct.fromInt(
+                    bg == Color.TRANSPARENT
+                            ? GOOGLE_BLUE
+                            : (style != ThemeStyle.CONTENT
+                                    && bgProposedSeedHct.getChroma() < 5
+                                    ? GOOGLE_BLUE
+                                    : bg)));
+            bgScheme = switch (style) {
+                case ThemeStyle.SPRITZ -> new SchemeNeutral(bgSeedHcts, isDark, contrastLevel,
+                        specVersion, platform);
+                case ThemeStyle.TONAL_SPOT -> new SchemeTonalSpot(bgSeedHcts, isDark,
+                        contrastLevel, specVersion, platform);
+                case ThemeStyle.VIBRANT -> new SchemeVibrant(bgSeedHcts, isDark, contrastLevel,
+                        specVersion, platform);
+                case ThemeStyle.EXPRESSIVE -> new SchemeExpressive(bgSeedHcts, isDark,
+                        contrastLevel, specVersion, platform);
+                case ThemeStyle.RAINBOW -> new SchemeRainbow(bgSeedHcts, isDark, contrastLevel,
+                        specVersion, platform);
+                case ThemeStyle.FRUIT_SALAD -> new SchemeFruitSalad(bgSeedHcts, isDark,
+                        contrastLevel, specVersion, platform);
+                case ThemeStyle.CONTENT -> new SchemeContent(bgSeedHcts, isDark, contrastLevel,
+                        specVersion, platform);
+                case ThemeStyle.MONOCHROMATIC -> new SchemeMonochrome(bgSeedHcts, isDark,
+                        contrastLevel, specVersion, platform);
+                case ThemeStyle.CMF -> new SchemeCmf(bgSeedHcts, isDark, contrastLevel,
+                        specVersion, platform);
+                case ThemeStyle.FIDELITY -> new SchemeFidelity(bgSeedHcts, isDark, contrastLevel,
+                        specVersion, platform);
+                // SystemUI Schemes
+                case ThemeStyle.CLOCK -> new SchemeClock(bgSeedHcts.getFirst(), isDark,
+                        contrastLevel);
+                case ThemeStyle.CLOCK_VIBRANT -> new SchemeClockVibrant(bgSeedHcts.getFirst(),
+                        isDark, contrastLevel);
+                default -> throw new IllegalArgumentException("Unknown style: " + style);
+            };
+        }
 
         mAccent1 = new TonalPalette(mMaterialScheme.primaryPalette, luminanceFactor, chromaFactor);
         mAccent2 = new TonalPalette(mMaterialScheme.secondaryPalette,
