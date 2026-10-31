@@ -162,6 +162,15 @@ constructor(
             )
         }
 
+        // Pack artwork is already composed. Skip the adaptive mask, shadow, and opaque fill.
+        if (icon is IconPackArtwork) {
+            options
+                .assumeFullBleedIcon(false)
+                .setWrapNonAdaptiveIcon(false)
+                .setDrawFullBleed(false)
+                .setAddShadows(false)
+        }
+
         // Create the bitmap first
         val oldBounds = icon.bounds
 

@@ -5,6 +5,9 @@ import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 
+/** Finished icon-pack artwork that must keep its shape and transparency. */
+interface IconPackArtwork
+
 open class ExtendedBitmapDrawable(
     res: Resources,
     bitmap: Bitmap,
@@ -23,6 +26,9 @@ open class ExtendedBitmapDrawable(
         }
 
         @JvmStatic
-        val Drawable.isFromIconPack get() = (this as? ExtendedBitmapDrawable)?.isFromIconPack ?: false
+        val Drawable.isFromIconPack
+            get() =
+                ((this as? ExtendedBitmapDrawable)?.isFromIconPack == true) ||
+                    this is IconPackArtwork
     }
 }
